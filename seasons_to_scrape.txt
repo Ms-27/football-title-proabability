@@ -1,9 +1,8 @@
 https://histoiredupsg.fr/saison-1970-1971-2/
-# Ajoutez d'autres saisons ici, une URL par ligne
-# https://histoiredupsg.fr/saison-1971-1972-2/
-# https://histoiredupsg.fr/saison-1972-1973-2/
-# https://histoiredupsg.fr/saison-1973-1974-2/
-# https://histoiredupsg.fr/saison-1974-1975-2/
+https://histoiredupsg.fr/saison-1971-1972/
+https://histoiredupsg.fr/saison-1972-1973/
+https://histoiredupsg.fr/saison-1973-1974/
+https://histoiredupsg.fr/saison-1974-1975/
 https://histoiredupsg.fr/saison-1975-1976/
 https://histoiredupsg.fr/saison-1976-1977/
 https://histoiredupsg.fr/saison-1977-1978/

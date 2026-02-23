@@ -105,36 +105,136 @@ class PSGFinalScraper:
             
             season = self.extract_season_from_url(url)
             
-            # Parser avec BeautifulSoup pour extraire les matchs depuis les span
-            soup = BeautifulSoup(response.content, 'html.parser')
+            # Essayer la méthode avec les spans (saisons 1970-1981)
+            matches = self.scrape_with_spans(response.content, season, url)
             
-            matches = []
+            if matches:
+                print(f"📊 {len(matches)} matchs trouvés avec la méthode spans")
+                return matches
             
-            # Trouver tous les spans qui contiennent des matchs
-            # Les matchs sont dans des spans avec style="color: #ffffff;"
-            match_spans = soup.find_all('span', style=lambda x: x and 'color: #ffffff' in x)
+            # Si pas de matchs avec les spans, essayer la méthode texte brut (saisons 1982+)
+            print("🔍 Tentative avec méthode texte brut...")
+            matches = self.scrape_with_text(response.text, season, url)
             
-            print(f"📊 {len(match_spans)} spans trouvés")
+            if matches:
+                print(f"📊 {len(matches)} matchs trouvés avec la méthode texte")
+                return matches
             
-            for span in match_spans:
-                span_text = span.get_text()
-                
-                # Vérifier si ce span contient un match (date + score)
-                if re.search(r'\d{1,2}/\d{1,2}/\d{2,4}.*?\d+\s*[-:]\s*\d+', span_text):
-                    print(f"  🔍 Span trouvé: {span_text[:100]}...")
-                    
-                    # Parser le match depuis ce span
-                    match_data = self.parse_match_from_span(span_text, season, url)
-                    if match_data:
-                        matches.append(match_data)
-                        print(f"    ✅ {match_data['date_brute']} - {match_data['adversaire']} ({match_data['score_complet']})")
-            
-            print(f"📊 Total: {len(matches)} matchs extraits")
-            return matches
+            print(f"📊 Total: 0 matchs extraits")
+            return []
             
         except Exception as e:
             print(f"❌ Erreur scraping {url}: {e}")
             return []
+    
+    def scrape_with_spans(self, content: bytes, season: str, url: str) -> List[Dict]:
+        """Méthode pour les saisons 1970-1981 (avec spans)"""
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(content, 'html.parser')
+        
+        matches = []
+        
+        # Trouver tous les spans qui contiennent des matchs
+        match_spans = soup.find_all('span', style=lambda x: x and 'color: #ffffff' in x)
+        
+        for span in match_spans:
+            span_text = span.get_text()
+            
+            # Vérifier si ce span contient un match (date + score)
+            if re.search(r'\d{1,2}/\d{1,2}/\d{2,4}.*?\d+\s*[-:]\s*\d+', span_text):
+                match_data = self.parse_match_from_span(span_text, season, url)
+                if match_data:
+                    matches.append(match_data)
+        
+        return matches
+    
+    def scrape_with_text(self, page_text: str, season: str, url: str) -> List[Dict]:
+        """Méthode pour les saisons 1982+ (avec texte brut)"""
+        matches = []
+        
+        # Nettoyer le HTML pour obtenir du texte propre
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(page_text, 'html.parser')
+        clean_text = soup.get_text()
+        
+        # Trouver la section des matchs
+        if 'Les matchs du PARIS SAINT-GERMAIN' not in clean_text:
+            return matches
+        
+        start_idx = clean_text.find('Les matchs du PARIS SAINT-GERMAIN')
+        match_section = clean_text[start_idx:]
+        
+        # Limiter la section pour éviter de prendre le classement
+        end_markers = ["Classement final", "Buteurs", "Effectif", "Transferts", "Les maillots"]
+        end_idx = len(match_section)
+        
+        for marker in end_markers:
+            marker_idx = match_section.find(marker)
+            if marker_idx != -1 and marker_idx < end_idx:
+                end_idx = marker_idx
+        
+        match_section = match_section[:end_idx]
+        
+        # Patterns pour différents formats de matchs
+        patterns = [
+            # Format moderne récent: "21/07/23, match amical, PSG – Le Havre 2-0"
+            r'(\d{1,2}/\d{1,2}/\d{2,4}),\s*([^,]*?),\s*([A-Za-z\s\-\.\u00C0-\u00FF]+)\s*–\s*([A-Za-z\s\-\.\u00C0-\u00FF]+)\s*(\d+\s*[-:]?\s*\d+)',
+            
+            # Format avec détails: "12/08/23, Ligue 1, 1ère journée, PSG – Lorient 0-0 (12e)"
+            r'(\d{1,2}/\d{1,2}/\d{2,4}),\s*([^,]+),\s*([^,]+),\s*([A-Za-z\s\-\.\u00C0-\u00FF]+)\s*–\s*([A-Za-z\s\-\.\u00C0-\u00FF]+)\s*(\d+\s*[-:]?\s*\d+)',
+            
+            # Format Ligue des Champions: "18/09/24, Ligue des Champions, 1ère j., PSG – Gérone 1-0"
+            r'(\d{1,2}/\d{1,2}/\d{2,4}),\s*([^,]+),\s*([^,]+),\s*([A-Za-z\s\-\.\u00C0-\u00FF]+)\s*–\s*([A-Za-z\s\-\.\u00C0-\u00FF]+)\s*(\d+\s*[-:]?\s*\d+)',
+            
+            # Format Coupe du Monde des Clubs: "15/06/25, Coupe du Monde des Clubs, 1ère j., PSG – Atlético Madrid 4-0"
+            r'(\d{1,2}/\d{1,2}/\d{2,4}),\s*([^,]+),\s*([^,]+),\s*([A-Za-z\s\-\.\u00C0-\u00FF]+)\s*–\s*([A-Za-z\s\-\.\u00C0-\u00FF]+)\s*(\d+\s*[-:]?\s*\d+)',
+            
+            # Format ancien: "10/09/20, Ligue 1, 2ème j. match en retard, Lens – PSG : 1-0"
+            r'(\d{1,2}/\d{1,2}/\d{2,4}),\s*([^,]+),\s*([^,]*),\s*([A-Za-z\s\-\.\u00C0-\u00FF]+)\s*–\s*([A-Za-z\s\-\.\u00C0-\u00FF]+)\s*:\s*(\d+\s*[-:]?\s*\d+)',
+            
+            # Format simple: "10/09/20, Ligue 1, Lens – PSG : 1-0"
+            r'(\d{1,2}/\d{1,2}/\d{2,4}),\s*([^,]+),\s*([A-Za-z\s\-\.\u00C0-\u00FF]+)\s*–\s*([A-Za-z\s\-\.\u00C0-\u00FF]+)\s*:\s*(\d+\s*[-:]?\s*\d+)',
+            
+            # Pattern plus flexible pour capturer les formats avec caractères spéciaux
+            r'(\d{1,2}/\d{1,2}/\d{2,4})[^–\n]*?([A-Za-z\s\-\.\u00C0-\u00FF]+)\s*–\s*([A-Za-z\s\-\.\u00C0-\u00FF]+)[^:]*?:(\d+\s*[-:]?\s*\d+)',
+            
+            # Pattern ultra-flexible pour les formats récents sans deux-points
+            r'(\d{1,2}/\d{1,2}/\d{2,4})[^–\n]*?([A-Za-z\s\-\.\u00C0-\u00FF]+)\s*–\s*([A-Za-z\s\-\.\u00C0-\u00FF]+)\s*(\d+\s*[-:]?\s*\d+)',
+        ]
+        
+        for pattern in patterns:
+            matches_found = re.findall(pattern, match_section)
+            
+            for match_tuple in matches_found:
+                if len(match_tuple) == 6:  # Format moderne avec détails
+                    date_str, competition, details, team1, team2, score_str = match_tuple
+                    full_competition = f"{competition.strip()}, {details.strip()}"
+                elif len(match_tuple) == 5:  # Format simple
+                    date_str, competition, team1, team2, score_str = match_tuple
+                    full_competition = competition.strip()
+                elif len(match_tuple) == 4:  # Format flexible ou ultra-flexible
+                    date_str, team1, team2, score_str = match_tuple
+                    full_competition = "Compétition inconnue"
+                else:
+                    continue
+                
+                match_data = self.create_match_data(date_str, full_competition, team1, team2, score_str, season, url)
+                if match_data:
+                    matches.append(match_data)
+        
+        # Dédupliquer les matchs basés sur date et adversaire
+        unique_matches = []
+        seen_matches = set()
+        
+        for match in matches:
+            # Créer une clé unique basée sur date et adversaire
+            match_key = f"{match['date_brute']}_{match['adversaire']}"
+            
+            if match_key not in seen_matches:
+                seen_matches.add(match_key)
+                unique_matches.append(match)
+        
+        return unique_matches
     
     def parse_match_from_span(self, span_text: str, season: str, url: str) -> Optional[Dict]:
         """Parse un match depuis un span spécifique"""
@@ -236,8 +336,16 @@ class PSGFinalScraper:
             return []
     
     def get_data_hash(self, data: List[Dict]) -> str:
-        """Génère un hash des données pour détecter les changements"""
-        data_str = json.dumps(data, sort_keys=True, ensure_ascii=False)
+        """Génère un hash des données pour détecter les changements (sans date d'extraction)"""
+        # Créer une copie des données sans la date d'extraction
+        data_for_hash = []
+        for item in data:
+            item_copy = item.copy()
+            if 'date_extraction' in item_copy:
+                del item_copy['date_extraction']
+            data_for_hash.append(item_copy)
+        
+        data_str = json.dumps(data_for_hash, sort_keys=True, ensure_ascii=False)
         return hashlib.md5(data_str.encode('utf-8')).hexdigest()
     
     def load_existing_data(self, filename: str) -> tuple[List[Dict], str]:
