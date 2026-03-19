@@ -9,12 +9,12 @@ FORM_WEIGHT = 0.2
 MATCHES_PLAYED = 22
 
 TEAM_DATA = {
-    'PSG': {'scored': 52, 'conceded': 19, 'remaining': 11, 'wins': 17, 'draws': 3, 
-            'cleansheet_rate': 0.52, 'scoring_rate': 0.91, 'recent_form': 2.63},
-    'RCL': {'scored': 44, 'conceded': 20, 'remaining': 11, 'wins': 17, 'draws': 1,
-            'cleansheet_rate': 0.39, 'scoring_rate': 0.83, 'recent_form': 2.25},
-    'OL':  {'scored': 36, 'conceded': 20, 'remaining': 12, 'wins': 14, 'draws': 3,
-            'cleansheet_rate': 0.55, 'scoring_rate': 0.86, 'recent_form': 2.63},
-    'OM':  {'scored': 48, 'conceded': 31, 'remaining': 11, 'wins': 12, 'draws': 4,
-            'cleansheet_rate': 0.26, 'scoring_rate': 0.74, 'recent_form': 1.38},
+    'PSG': {'scored': 54, 'conceded': 22, 'remaining': 9, 'wins': 18, 'draws': 3, 
+            'cleansheet_rate': 0.52, 'scoring_rate': 0.92, 'recent_form': 2.25},
+    'RCL': {'scored': 49, 'conceded': 23, 'remaining': 8, 'wins': 18, 'draws': 2,
+            'cleansheet_rate': 0.38, 'scoring_rate': 0.85, 'recent_form': 1.63},
+    'OL':  {'scored': 40, 'conceded': 27, 'remaining': 8, 'wins': 14, 'draws': 5,
+            'cleansheet_rate': 0.5, 'scoring_rate': 0.85, 'recent_form': 1.75},
+    'OM':  {'scored': 53, 'conceded': 33, 'remaining': 8, 'wins': 15, 'draws': 4,
+            'cleansheet_rate': 0.31, 'scoring_rate': 0.77, 'recent_form': 1.75},
 }
